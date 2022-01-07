@@ -1,0 +1,22 @@
+.van-swipe-cell-delete {
+  position: absolute;
+  right: -65px;
+  top: 0;
+  //transform: translateY(-50%);
+  z-index: 1;
+  color: #fff;
+  font-size: 14px;
+  width: 65px;
+  text-align: center;
+  height: 100%;
+  line-height: 8;
+}
+van-sticky .van-row {
+  background: #FFF;
+}
+van-sticky .van-icon {
+  position: absolute;
+  font-size: 32px;
+  top: 8px;
+  right: 16px;
+}
