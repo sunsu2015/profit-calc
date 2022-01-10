@@ -135,7 +135,7 @@ const productDetail = [{
 }, {
   type: '期货资管', name: 'ZY中宁2号', status: '募集中', foundDate: '20211020', period: '12', rate: '0.075', maxRate: '', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
 }, {
-  type: '期货资管', name: 'ZY城债苏鲁仁广1号', status: '募集中', foundDate: '20210827', period: '24', rate: '0.08', maxRate: '', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
+  type: '期货资管', name: 'ZY苏鲁仁广1号', status: '募集中', foundDate: '20210827', period: '24', rate: '0.08', maxRate: '', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
 }, {
   type: '信托', name: '平安信托', status: '募集中', foundDate: '20211214', period: '12', rate: '0.07', maxRate: '', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '利位投顾'
 }];
@@ -235,8 +235,7 @@ export default {
         },
         {
           values: products['债券私募'],
-          className: 'column2',
-          defaultIndex: 0
+          className: 'column2'
         }
       ],
       show: false,
@@ -295,11 +294,9 @@ export default {
       const picker = page.selectComponent('#picker');
       if (obj) {
         picker.setColumnValues(1, products[obj.type]);
-        const index0 = Object.keys(products).findIndex(item => item === obj.type);
-        picker.setColumnIndex(0, index0);
-        const index1 = products[obj.type].findIndex(item => item === obj.name);
-        console.log(index1)
-        picker.setColumnIndex(1, index1);
+        picker.setColumnValue(0, obj.type);
+        picker.setColumnValue(1, obj.name);
+        console.log(picker.getColumnValue(1))
       } else {
         const column0Value = picker.getColumnValue(0);
         picker.setColumnValues(1, products[column0Value]);
