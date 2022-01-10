@@ -28,12 +28,15 @@
           <van-icon v-if="!selectedProducts.length" name="add" @tap="addProduct();editIndex=-1;" />
         </van-col>
         <van-col :span="24">
-          <view v-if="unsetInvestmentAmount>0" style="padding-left: var(--cell-horizontal-padding, 32rpx);">
+          <view v-if="unsetInvestmentAmount>0 && !hasError()" style="padding-left: var(--cell-horizontal-padding, 32rpx);">
             <text style="color: #ff976a;font-size: var(--cell-font-size,24rpx);">待分配投资金额{{amountPipe(unsetInvestmentAmount)}}万</text>
           </view>
-          <view v-if="unsetInvestmentAmount===0" style="padding-left: var(--cell-horizontal-padding, 32rpx);">
-            <van-tag v-if="oneYearProfit" style="padding-left:20rpx;" type="danger" size="large">一年总收益:{{amountPipe(oneYearProfit)}}<text v-if="oneYearProfitMax">~{{amountPipe(oneYearProfitMax)}}</text>万</van-tag>&nbsp;
-            <van-tag v-if="twoYearProfit" type="danger" size="large">两年总收益:{{amountPipe(twoYearProfit)}}<text v-if="twoYearProfitMax">~{{amountPipe(twoYearProfitMax)}}</text>万</van-tag>
+          <view v-if="unsetInvestmentAmount===0 && !hasError()" style="padding-left: var(--cell-horizontal-padding, 32rpx);margin-bottom: var(--cell-vertical-margin, 10rpx);">
+            <van-tag v-if="oneYearProfit" style="padding-left:20rpx;" type="danger">一年总收益:{{amountPipe(oneYearProfit)}}<text v-if="oneYearProfitMax">~{{amountPipe(oneYearProfitMax)}}</text>万</van-tag>&nbsp;
+            <van-tag v-if="twoYearProfit" type="danger">两年总收益:{{amountPipe(twoYearProfit)}}<text v-if="twoYearProfitMax">~{{amountPipe(twoYearProfitMax)}}</text>万</van-tag>
+          </view>
+          <view v-if="hasError()" style="padding-left: var(--cell-horizontal-padding, 32rpx);">
+            <text style="color: #ee0a24;font-size: var(--cell-font-size,24rpx);">存在错误尚未处理</text>
           </view>
         </van-col>
       </van-row>
@@ -54,7 +57,7 @@
                   <van-tag v-if="p.profit" type="danger">收益：{{amountPipe(p.profit)}}<text v-if="p.maxProfit">~{{amountPipe(p.maxProfit)}}</text>万</van-tag>
                 </view>
               </view>
-              <view><van-icon name="records" @tap="addProduct();editIndex=i;" /></view>
+              <view><van-icon name="records" @tap="addProduct(p);editIndex=i;" /></view>
             </view>
           </slot-view>
           <view>
@@ -96,7 +99,7 @@
       <slot-view class="custom-button" name="button">{{ value }}/100</slot-view>
     </van-slider> -->
     <van-popup :show="show" position="bottom">
-      <van-picker :columns="columns" :show-toolbar="true" @change="onChange" @confirm="onConfirm" @cancel="onCancel" />
+      <van-picker id="picker" :columns="columns" :show-toolbar="true" @change="onChange" @confirm="onConfirm" @cancel="onCancel" />
     </van-popup>
     <van-notify id="van-notify" />
     <view v-show="loading" style="position: absolute;top: 50%; left: 50%; transform: translate(-50%, -50%)">
@@ -108,6 +111,7 @@
 <script>
 import './index.scss'
 import Notify from '@vant/notify/notify';
+import {getCurrentInstance} from "@tarojs/taro";
 const products = {
   债券私募: ['中湛恒久1号', '中湛鲁政1号', '中湛黔进1号', '中湛黔进2号'],
   权益私募: ['道昆中证500指数增强策略', '道昆量化阿尔法1号'],
@@ -226,7 +230,8 @@ export default {
       columns: [
         {
           values: Object.keys(products),
-          className: 'column1'
+          className: 'column1',
+          defaultIndex: 0
         },
         {
           values: products['债券私募'],
@@ -285,7 +290,20 @@ export default {
     onCancel(e) {
       this.show = false;
     },
-    addProduct() {
+    addProduct(obj) {
+      const { page } = getCurrentInstance()
+      const picker = page.selectComponent('#picker');
+      if (obj) {
+        picker.setColumnValues(1, products[obj.type]);
+        const index0 = Object.keys(products).findIndex(item => item === obj.type);
+        picker.setColumnIndex(0, index0);
+        const index1 = products[obj.type].findIndex(item => item === obj.name);
+        console.log(index1)
+        picker.setColumnIndex(1, index1);
+      } else {
+        const column0Value = picker.getColumnValue(0);
+        picker.setColumnValues(1, products[column0Value]);
+      }
       setTimeout(() => {
         if (this.investmentAmountTotal) {
           if (this.investmentAmountTotalErrMsg) {
@@ -424,6 +442,9 @@ export default {
       this.selectedProducts.forEach(item => {
         this.calcAmount(item);
       })
+      this.selectedProducts.forEach(item => {
+        this.validator(item, 'investmentAmount');
+      })
     },
     calcPlaceholder() {
       const alreadySetInvestmentAmount = this.selectedProducts.map(item => {
@@ -500,20 +521,28 @@ export default {
       this.calcPlaceholder();
     },
     preset(customerType) {
-      const investmentAmountTotal = Number(this.investmentAmountTotal.toString().replace(/,/g, '').replace('.00', ''));
-      if (investmentAmountTotal >= 1000) {
-        this.selectedProducts = fastPreset[customerType].map(item => {
-          const match = productDetail.find(ele => ele.name === item.name);
-          return {...match, ...item};
-        })
-        this.selectedProducts.forEach(item => this.investmentRateBlur({detail: {value: item.investmentRate}}, item, 'investmentRate'));
-      } else {
-        return Notify({type: 'warning', message: `总投资金额需要至少1,000.00万`})
-      }
+      setTimeout(() => {
+        const investmentAmountTotal = Number(this.investmentAmountTotal.toString().replace(/,/g, '').replace('.00', ''));
+        if (investmentAmountTotal >= 1000) {
+          this.selectedProducts = fastPreset[customerType].map(item => {
+            const match = productDetail.find(ele => ele.name === item.name);
+            return {...match, ...item};
+          })
+          this.selectedProducts.forEach(item => this.investmentRateBlur({detail: {value: item.investmentRate}}, item, 'investmentRate'));
+        } else {
+          return Notify({type: 'warning', message: `总投资金额需要至少1,000.00万`})
+        }
+      }, 100);
+    },
+    hasError() {
+      console.log(this.investmentAmountTotalErrMsg)
+      console.log(this.selectedProducts.filter(item => item.investmentAmountErrMsg || item.investmentRateErrMsg).length)
+      return !!this.investmentAmountTotalErrMsg || this.selectedProducts.filter(item => item.investmentAmountErrMsg || item.investmentRateErrMsg).length
     }
   },
   computed:{
     unsetInvestmentAmount: function() {
+
       if (this.investmentAmountTotal) {
         const alreadySetInvestmentAmount = this.selectedProducts.map(item => {
           if (item.investmentAmount) {
