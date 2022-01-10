@@ -20,8 +20,8 @@
           </van-field>
         </van-col>
         <van-col :span="5">
-            <van-tag :color="type1?'#1989fa' : 'grey'" @tap="type1=true;type2=false;">激进型</van-tag>
-            <van-tag :color="type2?'#1989fa' : 'grey'" @tap="type1=false;type2=true;">稳健型</van-tag>
+            <van-tag :color="customerType === 'positive'?'#1989fa' : 'grey'" @tap="preset('positive')">激进型</van-tag>
+            <van-tag :color="customerType === 'conservative'?'#1989fa' : 'grey'" @tap="preset('conservative')">稳健型</van-tag>
         </van-col>
         <van-col :span="3">
           <van-icon v-if="selectedProducts.length" name="add" :info="selectedProducts.length" @tap="addProduct();editIndex=-1;" />
@@ -32,8 +32,8 @@
             <text style="color: #ff976a;font-size: var(--cell-font-size,24rpx);">待分配投资金额{{amountPipe(unsetInvestmentAmount)}}万</text>
           </view>
           <view v-if="unsetInvestmentAmount===0" style="padding-left: var(--cell-horizontal-padding, 32rpx);">
-            <van-tag v-if="oneYearProfit" style="padding-left:20rpx;" type="danger" size="large">一年总收益:{{amountPipe(oneYearProfit)}}万</van-tag>&nbsp;
-            <van-tag v-if="twoYearProfit" type="danger" size="large">两年总收益:{{amountPipe(twoYearProfit)}}万</van-tag>
+            <van-tag v-if="oneYearProfit" style="padding-left:20rpx;" type="danger" size="large">一年总收益:{{amountPipe(oneYearProfit)}}<text v-if="oneYearProfitMax">~{{amountPipe(oneYearProfitMax)}}</text>万</van-tag>&nbsp;
+            <van-tag v-if="twoYearProfit" type="danger" size="large">两年总收益:{{amountPipe(twoYearProfit)}}<text v-if="twoYearProfitMax">~{{amountPipe(twoYearProfitMax)}}</text>万</van-tag>
           </view>
         </van-col>
       </van-row>
@@ -47,11 +47,11 @@
             <view class="van-cell">
               <view class="van-cell__title">
                 {{p.name}}
-                <van-tag type="warning">{{p.rate * 100}}%（年化）</van-tag>&nbsp;
+                <van-tag type="warning">{{precisionDispose(p.rate * 100)}}<text v-if="p.maxRate">~{{precisionDispose(p.maxRate * 100)}}</text>%(年化)</van-tag>&nbsp;
                 <van-tag type="primary">{{p.period}}个月</van-tag>&nbsp;
                 <van-tag type="success">{{p.type}}</van-tag>&nbsp;
                 <view class="van-cell__label">
-                  <van-tag v-if="p.profit" type="danger">收益：{{amountPipe(p.profit)}}万</van-tag>
+                  <van-tag v-if="p.profit" type="danger">收益：{{amountPipe(p.profit)}}<text v-if="p.maxProfit">~{{amountPipe(p.maxProfit)}}</text>万</van-tag>
                 </view>
               </view>
               <view><van-icon name="records" @tap="addProduct();editIndex=i;" /></view>
@@ -99,6 +99,9 @@
       <van-picker :columns="columns" :show-toolbar="true" @change="onChange" @confirm="onConfirm" @cancel="onCancel" />
     </van-popup>
     <van-notify id="van-notify" />
+    <view v-show="loading" style="position: absolute;top: 50%; left: 50%; transform: translate(-50%, -50%)">
+      <van-loading color="#1989fa" />
+    </view>
   </view>
 </template>
 
@@ -107,22 +110,30 @@ import './index.scss'
 import Notify from '@vant/notify/notify';
 const products = {
   债券私募: ['中湛恒久1号', '中湛鲁政1号', '中湛黔进1号', '中湛黔进2号'],
+  权益私募: ['道昆中证500指数增强策略', '道昆量化阿尔法1号'],
   期货资管: ['ZY月鑫宝', 'ZY中宁2号', 'ZY苏鲁仁广1号'],
+  信托: ['平安信托'],
 };
 const productDetail = [{
-  type: '债券私募', name: '中湛恒久1号', status: '募集中', foundDate: '', period: '24', rate: '0.075', minInvestmentAmount: '100', interestPayType:'赎回付息', manager: '中湛私募'
+  type: '债券私募', name: '中湛恒久1号', status: '募集中', foundDate: '', period: '24', rate: '0.075', maxRate: '', minInvestmentAmount: '100', interestPayType:'赎回付息', manager: '中湛私募'
 }, {
-  type: '债券私募', name: '中湛鲁政1号', status: '准备备案', foundDate: '', period: '14', rate: '0.077', minInvestmentAmount: '100', interestPayType:'赎回付息', manager: '中湛私募'
+  type: '债券私募', name: '中湛鲁政1号', status: '募集中', foundDate: '', period: '14', rate: '0.077', maxRate: '', minInvestmentAmount: '100', interestPayType:'赎回付息', manager: '中湛私募'
 }, {
-  type: '债券私募', name: '中湛黔进1号', status: '定稿中', foundDate: '', period: '12', rate: '0.08', minInvestmentAmount: '100', interestPayType:'赎回付息', manager: '中湛私募'
+  type: '债券私募', name: '中湛黔进1号', status: '准备备案', foundDate: '', period: '12', rate: '0.08', maxRate: '', minInvestmentAmount: '100', interestPayType:'赎回付息', manager: '中湛私募'
 }, {
-  type: '债券私募', name: '中湛黔进2号', status: '定稿中', foundDate: '', period: '24', rate: '0.085', minInvestmentAmount: '100', interestPayType:'赎回付息', manager: '中湛私募'
+  type: '债券私募', name: '中湛黔进2号', status: '准备备案', foundDate: '', period: '24', rate: '0.085', maxRate: '', minInvestmentAmount: '100', interestPayType:'赎回付息', manager: '中湛私募'
 }, {
-  type: '期货资管', name: 'ZY月鑫宝', status: '募集中', foundDate: '20210804', period: '1', rate: '0.06', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
+  type: '权益私募', name: '道昆中证500指数增强策略', status: '募集中', foundDate: '20211216', period: '12', rate: '-0.03', maxRate: '0.2', minInvestmentAmount: '100', interestPayType:'', manager: '道昆资产'
 }, {
-  type: '期货资管', name: 'ZY中宁2号', status: '募集中', foundDate: '20211020', period: '12', rate: '0.075', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
+  type: '权益私募', name: '道昆量化阿尔法1号', status: '募集中', foundDate: '20211216', period: '12', rate: '-0.03', maxRate: '0.2', minInvestmentAmount: '100', interestPayType:'', manager: '道昆资产'
 }, {
-  type: '期货资管', name: 'ZY城债苏鲁仁广1号', status: '募集中', foundDate: '20210827', period: '24', rate: '0.08', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
+  type: '期货资管', name: 'ZY月鑫宝', status: '募集中', foundDate: '20210804', period: '1', rate: '0.06', maxRate: '', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
+}, {
+  type: '期货资管', name: 'ZY中宁2号', status: '募集中', foundDate: '20211020', period: '12', rate: '0.075', maxRate: '', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
+}, {
+  type: '期货资管', name: 'ZY城债苏鲁仁广1号', status: '募集中', foundDate: '20210827', period: '24', rate: '0.08', maxRate: '', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '中原期货'
+}, {
+  type: '信托', name: '平安信托', status: '募集中', foundDate: '20211214', period: '12', rate: '0.07', maxRate: '', minInvestmentAmount: '30', interestPayType:'赎回付息', manager: '利位投顾'
 }];
 const validateMethods = {
   isEmpty: (value) => {
@@ -179,6 +190,31 @@ const validate = {
     return null
   }
 }
+// 稳健：月薪宝40%，中宁30%，鲁政30%；
+// 激进：月薪宝30，中宁30，鲁政15，量化15，恒久10
+
+const fastPreset = {
+  positive: [{
+      name: 'ZY月鑫宝', investmentRate: '30.00'
+    }, {
+      name: 'ZY中宁2号', investmentRate: '30.00'
+    }, {
+      name: '中湛鲁政1号', investmentRate: '15.00'
+    }, {
+      name: '道昆量化阿尔法1号', investmentRate: '15.00'
+    }, {
+      name: '中湛恒久1号', investmentRate: '10.00'
+    }
+  ],
+  conservative: [{
+      name: 'ZY月鑫宝', investmentRate: '40.00'
+    }, {
+      name: 'ZY中宁2号', investmentRate: '30.00'
+    }, {
+      name: '中湛鲁政1号', investmentRate: '30.00'
+    }
+  ]
+}
 export default {
   name: 'Index',
   components: {
@@ -199,12 +235,13 @@ export default {
         }
       ],
       show: false,
-      type1: false,
-      type2: false,
       selectedProducts: [],
       editIndex: -1,
       oneYearProfit: 0,
-      twoYearProfit: 0
+      oneYearProfitMax: 0,
+      twoYearProfit: 0,
+      twoYearProfitMax: 0,
+      loading: true
     }
   },
   methods: {
@@ -230,7 +267,7 @@ export default {
         }
         const selectedProduct = productDetail.find(item => item.name === e.detail.value[1]);
         this.selectedProducts.splice(this.editIndex, 1, {
-          ...selectedProduct, investmentAmount: '', investmentAmountErrMsg: '', investmentRate: '', investmentRateErrMsg: '', profit: '', placeholder: ''
+          ...selectedProduct, investmentAmount: '', investmentAmountErrMsg: '', investmentRate: '', investmentRateErrMsg: '', profit: '', maxProfit: '', placeholder: ''
         });
       } else {
         const exist = this.selectedProducts.find(item => item.name === e.detail.value[1]);
@@ -239,7 +276,7 @@ export default {
         }
         const selectedProduct = productDetail.find(item => item.name === e.detail.value[1]);
         this.selectedProducts.push({
-          ...selectedProduct, investmentAmount: '', investmentAmountErrMsg: '', investmentRate: '', investmentRateErrMsg: '', profit: '', placeholder: ''
+          ...selectedProduct, investmentAmount: '', investmentAmountErrMsg: '', investmentRate: '', investmentRateErrMsg: '', profit: '', maxProfit: '', placeholder: ''
         });
       }
       this.calcPlaceholder();
@@ -326,6 +363,9 @@ export default {
       if (typeof amount !== 'undefined' && amount !== null && amount !== '') {
         amount = amount.toString().replace(/,/g, '').replace('.00', '');
         obj.profit = this.precisionDispose((obj.rate / 12 * obj.period) * amount);
+        if (obj.maxRate) {
+          obj.maxProfit = this.precisionDispose((obj.maxRate / 12 * obj.period) * amount);
+        }
       } else {
         obj.profit = '';
       }
@@ -336,27 +376,53 @@ export default {
     },
     calcTotalProfit() {
       this.oneYearProfit = 0;
+      this.oneYearProfitMax = 0;
       this.twoYearProfit = 0;
+      this.twoYearProfitMax = 0;
       this.selectedProducts.forEach(item => {
         let amount = item.investmentAmount;
         if (typeof amount !== 'undefined' && amount !== null && amount !== '') {
           amount = amount.toString().replace('.00', '');
           if (item.period < 12) { // 不足一年的按一年算
-            this.oneYearProfit += this.precisionDispose(item.rate * amount)
+            this.oneYearProfit += this.precisionDispose(item.rate * amount);
+            if (item.maxRate) {
+              this.oneYearProfitMax += this.precisionDispose(item.maxRate * amount);
+            } else {
+              this.oneYearProfitMax += this.precisionDispose(item.rate * amount);
+            }
           } else if (item.period < 24) { // 大于等于一年不足两年的按实际算
             this.oneYearProfit += item.profit;
+            if (item.maxRate) {
+              this.oneYearProfitMax += item.maxProfit;
+            } else {
+              this.oneYearProfitMax += item.profit;
+            }
           } else { // 两年的算到两年里
             this.twoYearProfit += item.profit;
+            if (item.maxRate) {
+              this.twoYearProfitMax += item.maxProfit;
+            } else {
+              this.twoYearProfitMax += item.profit;
+            }
           }
         }
       });
       if (this.oneYearProfit && this.twoYearProfit) {
         this.twoYearProfit += 2 * this.oneYearProfit;
       }
+      if (this.oneYearProfitMax && this.twoYearProfitMax) {
+        this.twoYearProfitMax += 2 * this.oneYearProfitMax;
+      }
+      if (this.oneYearProfit === this.oneYearProfitMax) {
+        this.oneYearProfitMax = 0;
+      }
+      if (this.twoYearProfit === this.twoYearProfitMax) {
+        this.twoYearProfitMax = 0;
+      }
     },
     reCalc() {
       this.selectedProducts.forEach(item => {
-        this.calcRate(item);
+        this.calcAmount(item);
       })
     },
     calcPlaceholder() {
@@ -432,6 +498,18 @@ export default {
       this.calcSingleProfit(obj);
       this.calcTotalProfit();
       this.calcPlaceholder();
+    },
+    preset(customerType) {
+      const investmentAmountTotal = Number(this.investmentAmountTotal.toString().replace(/,/g, '').replace('.00', ''));
+      if (investmentAmountTotal >= 1000) {
+        this.selectedProducts = fastPreset[customerType].map(item => {
+          const match = productDetail.find(ele => ele.name === item.name);
+          return {...match, ...item};
+        })
+        this.selectedProducts.forEach(item => this.investmentRateBlur({detail: {value: item.investmentRate}}, item, 'investmentRate'));
+      } else {
+        return Notify({type: 'warning', message: `总投资金额需要至少1,000.00万`})
+      }
     }
   },
   computed:{
@@ -449,6 +527,40 @@ export default {
       } else {
         return null;
       }
+    },
+    customerType: function() {
+      this.loading = true
+      const investmentAmountTotal = Number(this.investmentAmountTotal.toString().replace(/,/g, '').replace('.00', ''));
+      if (investmentAmountTotal >= 1000) {
+        if (this.selectedProducts.length === fastPreset.conservative.length) {
+          let match = true
+          fastPreset.conservative.forEach(item => {
+            const find = this.selectedProducts.find(ele => ele.name === item.name) || {};
+            if (find.investmentRate - item.investmentRate !== 0) {
+              match = false;
+            }
+          })
+          if (match) {
+            this.loading = false
+            return 'conservative';
+          }
+        }
+        if (this.selectedProducts.length === fastPreset.positive.length) {
+          let match = true
+          fastPreset.positive.forEach(item => {
+            const find = this.selectedProducts.find(ele => ele.name === item.name) || {};
+            if (find.investmentRate - item.investmentRate !== 0) {
+              match = false;
+            }
+          })
+          if (match) {
+            this.loading = false
+            return 'positive';
+          }
+        }
+      }
+      this.loading = false
+      return '';
     }
   }
 }

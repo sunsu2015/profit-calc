@@ -13,6 +13,7 @@ export default {
     'van-field': '@vant/field/index',
     'van-icon': '@vant/icon/index',
     "van-tag": "@vant/tag/index",
-    "van-notify": "@vant/notify/index"
+    "van-notify": "@vant/notify/index",
+    "van-loading": "@vant/loading/index"
   }
 }
