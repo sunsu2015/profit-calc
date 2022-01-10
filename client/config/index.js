@@ -25,6 +25,7 @@ const config = {
       { from: 'src/components/vant-weapp/dist/slider/index.wxs', to: 'dist/components/vant-weapp/dist/slider/index.wxs' },
       { from: 'src/components/vant-weapp/dist/picker', to: 'dist/components/vant-weapp/dist/picker' },
       { from: 'src/components/vant-weapp/dist/picker-column', to: 'dist/components/vant-weapp/dist/picker-column' },
+      { from: 'src/components/vant-weapp/dist/notify', to: 'dist/components/vant-weapp/dist/notify' },
       { from: 'src/components/vant-weapp/dist/field/index.wxs', to: 'dist/components/vant-weapp/dist/field/index.wxs' },
     ],
     options: {

@@ -1,5 +1,5 @@
 export default {
-  navigationBarTitleText: '',
+  navigationBarTitleText: '投资计算器',
   usingComponents: {
     'van-sticky': '@vant/sticky/index',
     'van-row': '@vant/row/index',
@@ -12,5 +12,7 @@ export default {
     'van-popup': '@vant/popup/index',
     'van-field': '@vant/field/index',
     'van-icon': '@vant/icon/index',
+    "van-tag": "@vant/tag/index",
+    "van-notify": "@vant/notify/index"
   }
 }

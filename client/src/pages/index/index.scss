@@ -11,12 +11,47 @@
   height: 100%;
   line-height: 8;
 }
+.van-swipe-cell__right {
+  line-height: 12;
+  font-size: 12px;
+}
 van-sticky .van-row {
   background: #FFF;
 }
 van-sticky .van-icon {
   position: absolute;
-  font-size: 32px;
+  font-size: 24px;
   top: 8px;
   right: 16px;
+}
+.van-cell {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--cell-vertical-padding,20rpx) var(--cell-horizontal-padding,32rpx);
+  font-size: var(--cell-font-size,28rpx);
+  line-height: var(--cell-line-height,48rpx);
+  color: var(--cell-text-color,#323233);
+  background-color: var(--cell-background-color,#fff);
+  .van-icon {
+    font-size: 24px;
+    position: absolute;
+    right: 16px;
+  }
+  .van-cell__label {
+    margin-top: var(--cell-label-margin-top,6rpx);
+    font-size: var(--cell-label-font-size,24rpx);
+    line-height: var(--cell-label-line-height,36rpx);
+    color: var(--cell-label-color,#969799);
+  }
+}
+van-field .van-cell:after {
+  border-bottom: 0;
+}
+.panel {
+  padding: var(--cell-vertical-padding,20rpx) 0;
+}
+.panel.first{
+  padding-top: var(--cell-vertical-padding,40rpx);
 }
